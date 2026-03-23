@@ -1,29 +1,63 @@
 # MailHamster
 
-A lightweight SMTP relay daemon for Linux. It listens on localhost with username/password authentication, optionally rewrites the `From` header, and forwards mail to a configured upstream server. Ships as a single static binary.
+MailHamster is a small mail relay service for Linux servers. You configure it once with your real SMTP credentials (e.g. Gmail, Mailgun, your own mail server), and any application on the same machine can send mail through it on port 25 — no TLS setup, no per-app SMTP configuration.
 
-## How it works
+**Typical use case:** You have a web app, a script, or a monitoring tool that needs to send email. Instead of putting SMTP credentials in every app, you install MailHamster once and point everything at `localhost:25`.
 
-1. Your application connects to `127.0.0.1:25` and authenticates with PLAIN credentials defined in the config
-2. MailHamster (optionally) rewrites the `From` header
-3. The message is relayed to the configured upstream SMTP server using plain, STARTTLS, or implicit TLS
+---
+
+## Requirements
+
+- A Linux server with **systemd**
+- Root access
+- An outgoing SMTP server to relay through (e.g. Gmail, Mailgun, Sendgrid, your own)
+
+---
 
 ## Installation
+
+Run this as root on your server:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Tiboriuss/MailHamster/main/install.sh | sudo bash
 ```
 
-The installer will:
-- Download the correct binary for your architecture (amd64 / arm64)
-- Install an example config at `/etc/mailhamster/mailhamster.yaml`
-- Install and enable the systemd service (does **not** start it automatically — edit the config first)
+This downloads and installs MailHamster, creates the config file at `/etc/mailhamster/mailhamster.yaml`, and registers it as a system service. The service is **not started automatically** — you need to edit the config first.
 
-**Requirements:** systemd, curl, root access.
+---
 
-## Configuration
+## Setup
 
-After installation, edit `/etc/mailhamster/mailhamster.yaml`:
+Open the config file:
+
+```bash
+nano /etc/mailhamster/mailhamster.yaml
+```
+
+There are three things you need to fill in:
+
+**1. Your outgoing mail server** (`upstream` section)
+
+This is the SMTP server MailHamster will forward mail to. Use the credentials from your mail provider.
+
+| Provider | Host | Port | TLS |
+|---|---|---|---|
+| Gmail | `smtp.gmail.com` | 587 | `starttls` |
+| Mailgun | `smtp.mailgun.org` | 587 | `starttls` |
+| Sendgrid | `smtp.sendgrid.net` | 587 | `starttls` |
+| Office 365 | `smtp.office365.com` | 587 | `starttls` |
+| Custom (TLS) | your host | 465 | `tls` |
+| Custom (plain) | your host | 25 | `none` |
+
+**2. Local credentials** (`auth` section)
+
+Pick a username and password that your applications will use to connect to MailHamster on `localhost:25`. These are separate from your upstream credentials — make them whatever you like.
+
+**3. From address rewriting** (`rewrite` section, optional)
+
+If your upstream provider only allows mail from a specific sender address (common with shared relays), enable rewriting and set that address here.
+
+### Example config
 
 ```yaml
 listen:
@@ -32,73 +66,71 @@ listen:
 auth:
   users:
     - username: "myapp"
-      password: "changeme"
+      password: "a-strong-password"
 
 upstream:
-  host: "smtp.example.com"
+  host: "smtp.mailgun.org"
   port: 587
-  username: "relay@example.com"
-  password: "upstreampassword"
-  # tls: none | starttls | tls
+  username: "postmaster@mg.example.com"
+  password: "your-mailgun-smtp-password"
   tls: "starttls"
 
 rewrite:
-  enabled: false
+  enabled: false          # set to true if your upstream requires a fixed sender
   from: "noreply@example.com"
-  from_name: "My Application"
+  from_name: "My Server"
 
 logging:
-  level: "info"    # debug | info | warn | error
-  format: "text"   # text | json
+  level: "info"           # use "debug" to see detailed relay logs
+  format: "text"
 ```
 
-Then start the service:
+---
+
+## Starting the service
+
+Once the config is saved:
 
 ```bash
 systemctl start mailhamster
+```
+
+Check that it is running:
+
+```bash
 systemctl status mailhamster
+```
+
+View live logs:
+
+```bash
 journalctl -u mailhamster -f
 ```
 
-### Upstream TLS modes
+The service starts automatically on boot.
 
-| Mode | Description | Typical port |
-|---|---|---|
-| `none` | Plain SMTP, no encryption | 25 |
-| `starttls` | Upgrades to TLS via STARTTLS | 587 |
-| `tls` | Implicit TLS from the start | 465 |
+---
 
-### From rewriting
+## Sending mail through MailHamster
 
-When `rewrite.enabled: true`, MailHamster replaces the `From` (and `Sender` if present) header before relaying. This is useful when your upstream server only permits a single sender address (e.g. a shared transactional relay).
+From any application on the same server, point your SMTP settings at:
 
-## Building from source
+- **Host:** `127.0.0.1`
+- **Port:** `25`
+- **Username / Password:** whatever you set in `auth.users`
+- **TLS:** none (the connection stays on localhost)
 
-Requires Go 1.22+.
+---
 
-```bash
-git clone https://github.com/Tiboriuss/MailHamster.git
-cd MailHamster
-make build          # produces bin/mailhamster (native)
-make release        # cross-compiles dist/mailhamster-linux-{amd64,arm64}
-```
+## Troubleshooting
 
-## Releasing
+**451 relay failed** — MailHamster accepted the message but could not deliver it to the upstream server. Check your upstream credentials and host/port in the config. Run `journalctl -u mailhamster -f` and try again to see the exact error.
 
-Releases are automated via GitHub Actions and GoReleaser. Push a version tag to trigger a build:
+**535 authentication credentials invalid** — The username or password your application used does not match anything in `auth.users`.
 
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+**Connection refused on port 25** — The service is not running. Run `systemctl start mailhamster` and check `systemctl status mailhamster` for errors.
 
-The action compiles Linux binaries for amd64 and arm64, generates a SHA-256 checksum file, and publishes them as a GitHub Release.
-
-## Security notes
-
-- The listener has no TLS — it is intentionally localhost-only. Do not expose it on a network-facing interface.
-- The service runs as root, which allows it to bind to port 25 without any additional configuration.
-- The config file should only be readable by root: `chmod 600 /etc/mailhamster/mailhamster.yaml` (the installer sets this automatically).
+---
 
 ## Uninstalling
 
