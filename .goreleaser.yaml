@@ -1,0 +1,44 @@
+version: 2
+
+project_name: mailhamster
+
+builds:
+  - id: mailhamster
+    main: ./cmd/mailhamster
+    binary: mailhamster
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+# Publish raw binaries (no archives) so install.sh can download them directly.
+# Asset names will be: mailhamster-linux-amd64, mailhamster-linux-arm64
+archives:
+  - id: binaries
+    format: binary
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+release:
+  github:
+    owner: Tiboriuss
+    name: MailHamster
+  # Auto-generate release notes from commits since the last tag.
+  use_existing_draft: false
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "Merge pull request"
+      - "Merge branch"

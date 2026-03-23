@@ -1,0 +1,47 @@
+# MailHamster configuration
+# Copy to /etc/mailhamster/mailhamster.yaml and edit before starting.
+
+listen:
+  # TCP address the relay listens on.
+  # Keep this on localhost — MailHamster has no TLS on the listener by design.
+  addr: "127.0.0.1:25"
+
+auth:
+  # Users allowed to relay mail through MailHamster.
+  # These are LOCAL credentials, independent of the upstream server.
+  users:
+    - username: "myapp"
+      password: "changeme"
+    # - username: "otherapp"
+    #   password: "anothersecret"
+
+upstream:
+  # Remote SMTP server that MailHamster will relay messages to.
+  host: "smtp.example.com"
+  port: 587
+
+  # Credentials for the upstream server (leave empty if not required).
+  username: "relay@example.com"
+  password: "upstreampassword"
+
+  # TLS mode for the upstream connection:
+  #   none     — plain SMTP, no encryption (use only on trusted internal networks)
+  #   starttls — SMTP with STARTTLS upgrade (recommended, port 587 typical)
+  #   tls      — implicit TLS from the start (port 465 typical)
+  tls: "starttls"
+
+rewrite:
+  # When enabled, the From header and envelope sender are replaced with the
+  # values below before relaying. Useful for avoiding SPF failures when your
+  # application sends mail from arbitrary addresses but your upstream only
+  # allows a single sender.
+  enabled: false
+  from: "noreply@example.com"
+  from_name: "My Application"
+
+logging:
+  # Log level: debug | info | warn | error
+  level: "info"
+
+  # Log format: text (human-readable) | json (structured, recommended with journald)
+  format: "text"

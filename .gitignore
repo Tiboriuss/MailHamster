@@ -1,0 +1,15 @@
+# Build outputs
+bin/
+dist/
+
+# Go toolchain
+*.test
+*.out
+
+# Editor
+.DS_Store
+.idea/
+.vscode/
+
+# GoReleaser
+dist/
