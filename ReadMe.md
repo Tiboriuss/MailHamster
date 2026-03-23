@@ -16,7 +16,6 @@ curl -fsSL https://raw.githubusercontent.com/Tiboriuss/MailHamster/main/install.
 
 The installer will:
 - Download the correct binary for your architecture (amd64 / arm64)
-- Create a `mailhamster` system user
 - Install an example config at `/etc/mailhamster/mailhamster.yaml`
 - Install and enable the systemd service (does **not** start it automatically — edit the config first)
 
