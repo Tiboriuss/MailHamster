@@ -98,8 +98,8 @@ The action compiles Linux binaries for amd64 and arm64, generates a SHA-256 chec
 ## Security notes
 
 - The listener has no TLS — it is intentionally localhost-only. Do not expose it on a network-facing interface.
-- Credentials in the config file are read-only at runtime. Set `chmod 640` and `chown root:mailhamster` on the config (the installer does this automatically).
-- The systemd unit runs with a locked-down security profile (`NoNewPrivileges`, `ProtectSystem=strict`, `PrivateTmp`, etc.).
+- The service runs as root, which allows it to bind to port 25 without any additional configuration.
+- The config file should only be readable by root: `chmod 600 /etc/mailhamster/mailhamster.yaml` (the installer sets this automatically).
 
 ## Uninstalling
 
@@ -107,6 +107,5 @@ The action compiles Linux binaries for amd64 and arm64, generates a SHA-256 chec
 systemctl disable --now mailhamster
 rm -f /usr/local/bin/mailhamster /etc/systemd/system/mailhamster.service
 rm -rf /etc/mailhamster
-userdel mailhamster
 systemctl daemon-reload
 ```

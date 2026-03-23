@@ -9,7 +9,6 @@ CONF_DIR="/etc/mailhamster"
 CONF_FILE="${CONF_DIR}/mailhamster.yaml"
 SERVICE_FILE="/etc/systemd/system/mailhamster.service"
 SERVICE_NAME="mailhamster"
-SERVICE_USER="mailhamster"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 die()  { echo "ERROR: $*" >&2; exit 1; }
@@ -65,14 +64,6 @@ chmod 0755 "${TMP}"
 mv "${TMP}" "${INSTALL_BIN}"
 info "Binary installed: ${INSTALL_BIN}"
 
-# ── create system user ───────────────────────────────────────────────────────
-if ! id "${SERVICE_USER}" &>/dev/null; then
-  info "Creating system user: ${SERVICE_USER}"
-  useradd --system --no-create-home --shell /usr/sbin/nologin "${SERVICE_USER}"
-else
-  info "System user already exists: ${SERVICE_USER}"
-fi
-
 # ── install configuration ─────────────────────────────────────────────────────
 mkdir -p "${CONF_DIR}"
 
@@ -107,8 +98,7 @@ logging:
   level: "info"
   format: "text"
 YAML
-  chmod 640 "${CONF_FILE}"
-  chown "root:${SERVICE_USER}" "${CONF_FILE}"
+  chmod 600 "${CONF_FILE}"
 else
   info "Config already exists, not overwriting: ${CONF_FILE}"
 fi
@@ -123,29 +113,12 @@ After=network.target
 
 [Service]
 Type=simple
-User=mailhamster
-Group=mailhamster
 ExecStart=/usr/local/bin/mailhamster --config /etc/mailhamster/mailhamster.yaml
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=mailhamster
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ProtectKernelTunables=true
-ProtectControlGroups=true
-RestrictSUIDSGID=true
-LockPersonality=true
-RestrictRealtime=true
-MemoryDenyWriteExecute=true
-SystemCallFilter=@system-service
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-ReadOnlyPaths=/
-ReadWritePaths=/etc/mailhamster
 
 [Install]
 WantedBy=multi-user.target
@@ -170,5 +143,4 @@ echo "  To uninstall:"
 echo "    systemctl disable --now ${SERVICE_NAME}"
 echo "    rm -f ${INSTALL_BIN} ${SERVICE_FILE}"
 echo "    rm -rf ${CONF_DIR}"
-echo "    userdel ${SERVICE_USER}"
 echo ""
