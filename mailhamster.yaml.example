@@ -6,6 +6,14 @@ listen:
   # Keep this on localhost — MailHamster has no TLS on the listener by design.
   addr: "127.0.0.1:25"
 
+  # Set to true if your client (e.g. Ruby on Rails / ActionMailer) sends
+  # MAIL FROM with a display name, e.g.:
+  #   MAIL FROM:<App Name <noreply@example.com>>
+  # instead of the RFC 5321-compliant:
+  #   MAIL FROM:<noreply@example.com>
+  # MailHamster will strip the display name before relaying.
+  # lenient_mail_from: false
+
 auth:
   # Users allowed to relay mail through MailHamster.
   # These are LOCAL credentials, independent of the upstream server.

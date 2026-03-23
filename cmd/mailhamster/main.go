@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -50,11 +51,21 @@ func main() {
 		"upstream", fmt.Sprintf("%s:%d", cfg.Upstream.Host, cfg.Upstream.Port),
 		"upstream_tls", cfg.Upstream.TLS,
 		"rewrite_enabled", cfg.Rewrite.Enabled,
+		"lenient_mail_from", cfg.Listen.LenientMailFrom,
 	)
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- s.ListenAndServe()
+		if cfg.Listen.LenientMailFrom {
+			ln, err := net.Listen("tcp", cfg.Listen.Addr)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			errCh <- s.Serve(server.NewLenientListener(ln))
+		} else {
+			errCh <- s.ListenAndServe()
+		}
 	}()
 
 	sigCh := make(chan os.Signal, 1)

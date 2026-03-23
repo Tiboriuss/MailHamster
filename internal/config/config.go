@@ -48,6 +48,11 @@ type Logging struct {
 type Listen struct {
 	// Addr is the TCP address to bind (default: 127.0.0.1:25).
 	Addr string `yaml:"addr"`
+	// LenientMailFrom strips display names from MAIL FROM commands before
+	// parsing. Enable this when clients (e.g. Ruby on Rails / ActionMailer)
+	// send "MAIL FROM:<Display Name <addr@domain>>" instead of the RFC 5321
+	// compliant "MAIL FROM:<addr@domain>".
+	LenientMailFrom bool `yaml:"lenient_mail_from"`
 }
 
 // Config is the top-level configuration structure.
