@@ -16,13 +16,34 @@ MailHamster is a small mail relay service for Linux servers. You configure it on
 
 ## Installation
 
+### Online (recommended)
+
 Run this as root on your server:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Tiboriuss/MailHamster/main/install.sh | sudo bash
 ```
 
-This downloads and installs MailHamster, creates the config file at `/etc/mailhamster/mailhamster.yaml`, and registers it as a system service. The service is **not started automatically** — you need to edit the config first.
+This downloads the correct binary for your architecture, creates the config file at `/etc/mailhamster/mailhamster.yaml`, and registers it as a system service. The service is **not started automatically** — you need to edit the config first.
+
+### Offline
+
+If your server has no internet access, download two files from the [Releases page](https://github.com/Tiboriuss/MailHamster/releases/latest) onto your local machine first:
+
+- `mailhamster-linux-amd64` (or `mailhamster-linux-arm64` for ARM servers)
+- `offline-install.sh`
+
+Copy both to the server (e.g. via `scp`), rename the binary to `mailhamster`, and run the installer:
+
+```bash
+scp mailhamster-linux-amd64 offline-install.sh root@yourserver:/tmp/
+ssh root@yourserver
+cd /tmp
+mv mailhamster-linux-amd64 mailhamster
+bash offline-install.sh
+```
+
+The script expects the `mailhamster` binary to be in the same directory as `offline-install.sh`.
 
 ---
 
